@@ -257,6 +257,9 @@
             border: 2px solid #667eea;
             border-top: none;
             border-radius: 0 0 8px 8px;
+        }
+
+        #searchResponseSection .response-content {
             max-height: 500px;
             overflow: auto;
         }
@@ -444,6 +447,13 @@
         <!-- Live Mode Section -->
         <div id="liveModeSection">
             <button id="getAddressBtn" disabled>Get Full Address Details</button>
+
+            <div class="response-section" id="liveAddressResponseSection">
+                <div class="response-header">Full Address Details</div>
+                <div class="response-content">
+                    <pre id="liveAddressResponse"></pre>
+                </div>
+            </div>
         </div>
 
         <!-- Manual Mode Section -->
@@ -455,21 +465,14 @@
             <div class="response-section" id="searchResponseSection">
                 <div class="response-header">Search Response (Step 1)</div>
                 <div class="response-content">
-                    <pre id="searchResponse"></pre>
+                    <div id="searchResponse"></div>
                 </div>
             </div>
-
-            <div class="form-group" style="margin-top: 20px;">
-                <label for="monikerInput">Moniker (from search response):</label>
-                <input type="text" id="monikerInput" placeholder="Paste moniker here...">
-            </div>
-
-            <button id="manualGetAddressBtn">Get Address Details</button>
 
             <div class="response-section" id="addressResponseSection">
                 <div class="response-header">Address Response (Step 2)</div>
                 <div class="response-content">
-                    <pre id="addressResponse"></pre>
+                    <div id="addressResponse"></div>
                 </div>
             </div>
         </div>
@@ -487,12 +490,12 @@
         const liveModeSection = document.getElementById('liveModeSection');
         const manualModeSection = document.getElementById('manualModeSection');
         const manualSearchBtn = document.getElementById('manualSearchBtn');
-        const manualGetAddressBtn = document.getElementById('manualGetAddressBtn');
-        const monikerInput = document.getElementById('monikerInput');
         const searchResponseSection = document.getElementById('searchResponseSection');
         const addressResponseSection = document.getElementById('addressResponseSection');
         const searchResponse = document.getElementById('searchResponse');
         const addressResponse = document.getElementById('addressResponse');
+        const liveAddressResponseSection = document.getElementById('liveAddressResponseSection');
+        const liveAddressResponse = document.getElementById('liveAddressResponse');
         const messages = document.getElementById('messages');
 
         // Advanced options
@@ -686,7 +689,8 @@
                 const data = parseXmlToJson(xmlText);
 
                 if (isManual) {
-                    searchResponse.textContent = JSON.stringify(data, null, 2);
+                    const formattedSearch = formatSearchResponseBeautified(data);
+                    searchResponse.innerHTML = formattedSearch;
                 } else {
                     parseAndDisplayResults(data);
                 }
@@ -800,16 +804,6 @@
             }
         });
 
-        // Manual mode: Get address details
-        manualGetAddressBtn.addEventListener('click', function() {
-            const moniker = monikerInput.value.trim();
-            if (!moniker) {
-                showMessage('Please enter a moniker', 'error');
-                return;
-            }
-            getAddressDetails(moniker, true);
-        });
-
         // Get full address details (Step 2)
         async function getAddressDetails(moniker, isManual = false) {
             const apiKey = apiKeyInput.value.trim();
@@ -860,14 +854,15 @@
                 const data = parseXmlToJson(xmlText);
 
                 if (isManual) {
-                    addressResponse.textContent = JSON.stringify(data, null, 2);
+                    // Manual mode: Display beautified response like live mode
+                    const formattedAddress = formatAddressResponseBeautifiedFull(data);
+                    addressResponse.innerHTML = formattedAddress;
                 } else {
-                    showMessage('Address details retrieved successfully!', 'success');
+                    // Live mode: Display beautified response
+                    const formattedAddress = formatAddressResponseBeautified(data);
+                    liveAddressResponse.innerHTML = formattedAddress;
+                    liveAddressResponseSection.classList.add('show');
                     console.log('Full Address Details:', data);
-
-                    // Display in a nice format
-                    const formattedAddress = formatAddressResponse(data);
-                    showMessage(formattedAddress, 'success');
                 }
 
             } catch (error) {
@@ -880,7 +875,285 @@
             }
         }
 
-        // Format address response for display
+        // Format search response for beautified HTML display (Manual Mode - Step 1)
+        function formatSearchResponseBeautified(data) {
+            try {
+                const soapBody = data['soap:Envelope']?.['soap:Body'];
+                const searchResult = soapBody?.['QASearchResult'];
+                const picklist = searchResult?.['QAPicklist'];
+
+                if (!picklist) {
+                    return '<div style="color: #888;">No search results available</div>';
+                }
+
+                let picklistEntries = picklist['PicklistEntry'];
+                if (!picklistEntries) {
+                    return '<div style="color: #888;">No addresses found</div>';
+                }
+
+                // Ensure it's an array
+                if (!Array.isArray(picklistEntries)) {
+                    picklistEntries = [picklistEntries];
+                }
+
+                // Get picklist metadata
+                const fullPicklistMoniker = getTextContent(picklist['FullPicklistMoniker']) || '';
+                const prompt = getTextContent(picklist['Prompt']) || '';
+                const total = getTextContent(picklist['Total']) || picklistEntries.length;
+                const autoFormatSafe = picklist['@attributes']?.AutoFormatSafe || '';
+
+                let html = '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">';
+
+                // Metadata section
+                html += `<div style="margin-bottom: 25px; padding: 15px; background: #f5f7ff; border-radius: 8px; border-left: 4px solid #667eea;">`;
+                html += `<div style="font-weight: 700; color: #667eea; font-size: 14px; margin-bottom: 8px;">SEARCH METADATA</div>`;
+                html += `<div style="font-size: 13px; color: #666; margin-bottom: 4px;">Total Results: <strong>${escapeHtml(total.toString())}</strong></div>`;
+                if (autoFormatSafe) html += `<div style="font-size: 13px; color: #666; margin-bottom: 4px;">Auto Format Safe: <strong>${escapeHtml(autoFormatSafe)}</strong></div>`;
+                if (prompt) html += `<div style="font-size: 13px; color: #666; margin-bottom: 4px;">Prompt: <strong>${escapeHtml(prompt)}</strong></div>`;
+                html += `</div>`;
+
+                // Address results
+                html += `<div style="margin-bottom: 25px;">`;
+                html += `<div style="font-weight: 700; color: #667eea; font-size: 15px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">SEARCH RESULTS</div>`;
+
+                picklistEntries.forEach((entry, index) => {
+                    const moniker = getTextContent(entry['Moniker']) || '';
+                    const partialAddress = getTextContent(entry['PartialAddress']) || '';
+                    const picklist = getTextContent(entry['Picklist']) || '';
+                    const postcode = getTextContent(entry['Postcode']) || '';
+                    const score = getTextContent(entry['Score']) || '';
+                    const fullAddress = entry['@attributes']?.FullAddress || '';
+
+                    html += `<div style="background: ${index % 2 === 0 ? '#ffffff' : '#f9fafb'}; padding: 15px; margin-bottom: 10px; border-radius: 6px; border: 1px solid #e0e0e0;">`;
+                    html += `<div style="font-weight: 700; color: #333; font-size: 14px; margin-bottom: 10px; display: flex; align-items: center;">`;
+                    html += `<span style="background: #667eea; color: white; padding: 4px 10px; border-radius: 4px; margin-right: 10px; font-size: 12px;">#${index + 1}</span>`;
+                    html += `${escapeHtml(picklist || partialAddress)}`;
+                    if (fullAddress === 'true') {
+                        html += `<span style="background: #4caf50; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 8px;">FULL ADDRESS</span>`;
+                    }
+                    html += `</div>`;
+
+                    html += `<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">`;
+
+                    if (partialAddress && partialAddress !== picklist) {
+                        html += `<div style="color: #666;">Partial Address:</div>`;
+                        html += `<div style="color: #333; font-weight: 600;">${escapeHtml(partialAddress)}</div>`;
+                    }
+
+                    if (postcode) {
+                        html += `<div style="color: #666;">Postcode:</div>`;
+                        html += `<div style="color: #333; font-weight: 600;">${escapeHtml(postcode)}</div>`;
+                    }
+
+                    if (score) {
+                        const scoreNum = parseInt(score);
+                        let scoreColor = '#4caf50';
+                        if (scoreNum < 70) scoreColor = '#f44336';
+                        else if (scoreNum < 90) scoreColor = '#ff9800';
+
+                        html += `<div style="color: #666;">Match Score:</div>`;
+                        html += `<div style="color: ${scoreColor}; font-weight: 700;">${escapeHtml(score)}%</div>`;
+                    }
+
+                    html += `</div>`;
+
+                    if (moniker) {
+                        html += `<div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e0e0e0;">`;
+                        html += `<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">`;
+                        html += `<div style="color: #666; font-size: 11px;">Moniker:</div>`;
+                        html += `<button onclick="applyMoniker('${escapeHtml(moniker).replace(/'/g, "\\'")}'); return false;" style="background: #4caf50; color: white; border: none; padding: 2px 6px; border-radius: 3px; font-size: 9px; cursor: pointer; font-weight: 600; transition: background 0.2s; min-width: 40px; width: auto;" onmouseover="this.style.background='#45a049'" onmouseout="this.style.background='#4caf50'">Apply</button>`;
+                        html += `</div>`;
+                        html += `<div style="color: #333; font-family: monospace; font-size: 11px; background: #f5f5f5; padding: 6px; border-radius: 4px; word-break: break-all;">${escapeHtml(moniker)}</div>`;
+                        html += `</div>`;
+                    }
+
+                    html += `</div>`;
+                });
+
+                html += `</div>`;
+                html += '</div>';
+
+                return html;
+            } catch (error) {
+                console.error('Format search error:', error);
+                return '<div style="color: #c33;">Error formatting search results</div>';
+            }
+        }
+
+        // Format address response for beautified HTML display - FULL version (Manual Mode - shows ALL fields)
+        function formatAddressResponseBeautifiedFull(data) {
+            try {
+                const soapBody = data['soap:Envelope']?.['soap:Body'];
+                const address = soapBody?.['Address'];
+                const qaAddress = address?.['QAAddress'];
+
+                if (!qaAddress) {
+                    return '<div style="color: #888;">No address details available</div>';
+                }
+
+                let addressLines = qaAddress['AddressLine'];
+                if (!addressLines) {
+                    return '<div style="color: #888;">No address lines found</div>';
+                }
+
+                // Ensure it's an array
+                if (!Array.isArray(addressLines)) {
+                    addressLines = [addressLines];
+                }
+
+                // Group address lines by category (including empty values)
+                const categories = {
+                    'Property Details': [],
+                    'Street Details': [],
+                    'Location Details': [],
+                    'Postal Details': [],
+                    'Additional Information': []
+                };
+
+                addressLines.forEach(line => {
+                    const label = getTextContent(line['Label']);
+                    const lineText = getTextContent(line['Line']);
+                    const lineContent = line['@attributes']?.LineContent || '';
+
+                    // Categorize based on label
+                    if (label.includes('Flat') || label.includes('Unit') || label.includes('Building') || label.includes('Level') || label.includes('Allotment') || label.includes('Lot') || label.includes('Sub-building')) {
+                        categories['Property Details'].push({ label, value: lineText || '<empty>', isEmpty: !lineText, lineContent });
+                    } else if (label.includes('Street') || label.includes('Number')) {
+                        categories['Street Details'].push({ label, value: lineText || '<empty>', isEmpty: !lineText, lineContent });
+                    } else if (label.includes('Locality') || label.includes('State') || label.includes('City') || label.includes('Country')) {
+                        categories['Location Details'].push({ label, value: lineText || '<empty>', isEmpty: !lineText, lineContent });
+                    } else if (label.includes('Postcode') || label.includes('Barcode') || label.includes('postal') || label.includes('delivery')) {
+                        categories['Postal Details'].push({ label, value: lineText || '<empty>', isEmpty: !lineText, lineContent });
+                    } else {
+                        categories['Additional Information'].push({ label, value: lineText || '<empty>', isEmpty: !lineText, lineContent });
+                    }
+                });
+
+                let html = '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">';
+
+                // Display each category
+                Object.keys(categories).forEach(category => {
+                    if (categories[category].length > 0) {
+                        html += `<div style="margin-bottom: 25px;">`;
+                        html += `<div style="font-weight: 700; color: #667eea; font-size: 15px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #667eea; padding-bottom: 5px;">${category}</div>`;
+
+                        categories[category].forEach(item => {
+                            const emptyStyle = item.isEmpty ? 'color: #999; font-style: italic;' : 'color: #333; font-weight: 600;';
+                            const lineContentBadge = item.lineContent && item.lineContent !== 'None' ?
+                                `<span style="background: #e3f2fd; color: #1976d2; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 8px;">${item.lineContent}</span>` : '';
+
+                            html += `<div style="display: flex; padding: 10px 0; border-bottom: 1px solid #f0f0f0; align-items: center;">`;
+                            html += `<div style="flex: 0 0 240px; color: #666; font-size: 13px;">${escapeHtml(item.label)}:${lineContentBadge}</div>`;
+                            html += `<div style="flex: 1; ${emptyStyle} font-size: 14px;">${escapeHtml(item.value)}</div>`;
+                            html += `</div>`;
+                        });
+
+                        html += `</div>`;
+                    }
+                });
+
+                // Add metadata if available
+                const dpvStatus = qaAddress['@attributes']?.DPVStatus;
+                const overflow = qaAddress['@attributes']?.Overflow;
+                const truncated = qaAddress['@attributes']?.Truncated;
+
+                if (dpvStatus || overflow || truncated) {
+                    html += `<div style="margin-top: 20px; padding: 15px; background: #f5f7ff; border-radius: 8px; border-left: 4px solid #667eea;">`;
+                    html += `<div style="font-weight: 700; color: #667eea; font-size: 14px; margin-bottom: 8px;">METADATA</div>`;
+                    if (dpvStatus) html += `<div style="font-size: 13px; color: #666; margin-bottom: 4px;">DPV Status: <strong>${escapeHtml(dpvStatus)}</strong></div>`;
+                    if (overflow) html += `<div style="font-size: 13px; color: #666; margin-bottom: 4px;">Overflow: <strong>${overflow}</strong></div>`;
+                    if (truncated) html += `<div style="font-size: 13px; color: #666;">Truncated: <strong>${truncated}</strong></div>`;
+                    html += `</div>`;
+                }
+
+                html += '</div>';
+
+                return html || '<div style="color: #888;">No address information to display</div>';
+            } catch (error) {
+                console.error('Format error:', error);
+                return '<div style="color: #c33;">Error formatting address details</div>';
+            }
+        }
+
+        // Format address response for beautified HTML display (Live Mode)
+        function formatAddressResponseBeautified(data) {
+            try {
+                const soapBody = data['soap:Envelope']?.['soap:Body'];
+                const address = soapBody?.['Address'];
+                const qaAddress = address?.['QAAddress'];
+
+                if (!qaAddress) {
+                    return '<div style="color: #888;">No address details available</div>';
+                }
+
+                let addressLines = qaAddress['AddressLine'];
+                if (!addressLines) {
+                    return '<div style="color: #888;">No address lines found</div>';
+                }
+
+                // Ensure it's an array
+                if (!Array.isArray(addressLines)) {
+                    addressLines = [addressLines];
+                }
+
+                // Group address lines by category
+                const categories = {
+                    'Property': [],
+                    'Street': [],
+                    'Location': [],
+                    'Postal': [],
+                    'Other': []
+                };
+
+                addressLines.forEach(line => {
+                    const label = getTextContent(line['Label']);
+                    const lineText = getTextContent(line['Line']);
+
+                    if (lineText) {
+                        // Categorize based on label
+                        if (label.includes('Flat') || label.includes('Unit') || label.includes('Building') || label.includes('Level') || label.includes('Allotment') || label.includes('Lot')) {
+                            categories['Property'].push({ label, value: lineText });
+                        } else if (label.includes('Street') || label.includes('Number')) {
+                            categories['Street'].push({ label, value: lineText });
+                        } else if (label.includes('Locality') || label.includes('State') || label.includes('City')) {
+                            categories['Location'].push({ label, value: lineText });
+                        } else if (label.includes('Postcode') || label.includes('Barcode') || label.includes('postal')) {
+                            categories['Postal'].push({ label, value: lineText });
+                        } else {
+                            categories['Other'].push({ label, value: lineText });
+                        }
+                    }
+                });
+
+                let html = '<div style="font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif;">';
+
+                // Display each category
+                Object.keys(categories).forEach(category => {
+                    if (categories[category].length > 0) {
+                        html += `<div style="margin-bottom: 20px;">`;
+                        html += `<div style="font-weight: 700; color: #667eea; font-size: 14px; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;">${category}</div>`;
+
+                        categories[category].forEach(item => {
+                            html += `<div style="display: flex; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">`;
+                            html += `<div style="flex: 0 0 200px; color: #666; font-size: 13px;">${escapeHtml(item.label)}:</div>`;
+                            html += `<div style="flex: 1; color: #333; font-weight: 600; font-size: 14px;">${escapeHtml(item.value)}</div>`;
+                            html += `</div>`;
+                        });
+
+                        html += `</div>`;
+                    }
+                });
+
+                html += '</div>';
+
+                return html || '<div style="color: #888;">No address information to display</div>';
+            } catch (error) {
+                console.error('Format error:', error);
+                return '<div style="color: #c33;">Error formatting address details</div>';
+            }
+        }
+
+        // Format address response for display (kept for compatibility)
         function formatAddressResponse(data) {
             try {
                 const soapBody = data['soap:Envelope']?.['soap:Body'];
@@ -917,6 +1190,24 @@
                 console.error('Format error:', error);
                 return 'Address details retrieved (see console for full data)';
             }
+        }
+
+        // Apply moniker and get address details
+        function applyMoniker(moniker) {
+            if (!moniker) {
+                showMessage('Invalid moniker', 'error');
+                return;
+            }
+
+            // Show loading state
+            addressResponse.innerHTML = '<div style="text-align: center; padding: 20px; color: #667eea;">Loading address details...</div>';
+            addressResponseSection.classList.add('show');
+
+            // Scroll to the response section
+            addressResponseSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Make the second SOAP call
+            getAddressDetails(moniker, true);
         }
 
         // Show messages
