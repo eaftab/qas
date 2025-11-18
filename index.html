@@ -1,0 +1,1055 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experian Address Search</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 2em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 15px;
+            transition: border-color 0.3s, box-shadow 0.3s;
+            background: white;
+        }
+
+        input[type="text"]:focus,
+        input[type="password"]:focus,
+        input[type="number"]:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        select {
+            cursor: pointer;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23667eea' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 40px;
+        }
+
+        details summary {
+            list-style: none;
+        }
+
+        details summary::-webkit-details-marker {
+            display: none;
+        }
+
+        details[open] summary {
+            margin-bottom: 10px;
+        }
+
+        .info-text {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+            font-style: italic;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .options-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        .autocomplete-container {
+            position: relative;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 2px solid #667eea;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            display: none;
+        }
+
+        .autocomplete-dropdown.show {
+            display: block;
+        }
+
+        .autocomplete-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background-color: #f5f7ff;
+        }
+
+        .autocomplete-item.selected {
+            background-color: #667eea;
+            color: white;
+        }
+
+        .address-main {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .address-details {
+            font-size: 13px;
+            color: #666;
+        }
+
+        .autocomplete-item:hover .address-main {
+            color: #667eea;
+        }
+
+        .autocomplete-item.selected .address-main,
+        .autocomplete-item.selected .address-details {
+            color: white;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .button-group button {
+            flex: 1;
+        }
+
+        .response-section {
+            margin-top: 30px;
+            display: none;
+        }
+
+        .response-section.show {
+            display: block;
+        }
+
+        .response-header {
+            background: #f5f7ff;
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            color: #667eea;
+            border: 2px solid #667eea;
+            border-bottom: none;
+        }
+
+        .response-content {
+            background: #f9fafb;
+            padding: 16px;
+            border: 2px solid #667eea;
+            border-top: none;
+            border-radius: 0 0 8px 8px;
+            max-height: 500px;
+            overflow: auto;
+        }
+
+        pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #fcc;
+        }
+
+        .success {
+            background: #efe;
+            color: #3c3;
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-top: 10px;
+            border: 1px solid #cfc;
+        }
+
+        .mode-indicator {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 10px;
+        }
+
+        .mode-indicator.live {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .mode-indicator.manual {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Experian Address Search</h1>
+
+        <div class="form-group">
+            <label for="apiKey">API Key / Auth Token:</label>
+            <input type="password" id="apiKey" placeholder="Enter your API key">
+        </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="liveMode" checked>
+            <label for="liveMode">
+                Live Mode (Auto-search as you type)
+                <span class="mode-indicator live" id="modeIndicator">LIVE MODE</span>
+            </label>
+        </div>
+
+        <!-- Advanced Options -->
+        <details style="margin-bottom: 20px;">
+            <summary style="cursor: pointer; font-weight: 600; color: #667eea; padding: 10px 0;">Advanced Search Options</summary>
+
+            <div style="background: #f5f7ff; padding: 20px; border-radius: 8px; margin-top: 10px;">
+                <div class="options-grid">
+                    <div class="form-group">
+                        <label for="country">Country:</label>
+                        <input type="text" id="country" value="AUS" placeholder="e.g., AUS, USA, GBR">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="layout">Layout:</label>
+                        <input type="text" id="layout" value="CivicaAUS" placeholder="e.g., CivicaAUS">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="engineType">Engine Type:</label>
+                        <select id="engineType">
+                            <option value="SingleLine" selected>SingleLine</option>
+                            <option value="Singleline">Singleline</option>
+                            <option value="Intuitive">Intuitive</option>
+                            <option value="Verification">Verification</option>
+                            <option value="Keyfinder">Keyfinder</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="intensity">Search Intensity:</label>
+                        <select id="intensity">
+                            <option value="Exact">Exact - Strictest matching</option>
+                            <option value="Close">Close - Moderate matching</option>
+                            <option value="Extensive" selected>Extensive - Widest matching</option>
+                        </select>
+                        <div class="info-text">Controls how strict the address matching is</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="promptSet">Prompt Set:</label>
+                        <select id="promptSet">
+                            <option value="OneLine">OneLine</option>
+                            <option value="Default" selected>Default</option>
+                            <option value="Generic">Generic</option>
+                            <option value="Optimal">Optimal</option>
+                            <option value="Alternate">Alternate</option>
+                            <option value="Alternate2">Alternate2</option>
+                            <option value="Alternate3">Alternate3</option>
+                        </select>
+                        <div class="info-text">Determines the address display format</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="threshold">Threshold (1-100):</label>
+                        <input type="number" id="threshold" value="10" min="1" max="100">
+                        <div class="info-text">Max results to return</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="timeout">Timeout (ms):</label>
+                        <input type="number" id="timeout" value="1000" min="0" step="100">
+                        <div class="info-text">Max wait time for response</div>
+                    </div>
+
+                    <div class="checkbox-group" style="margin-bottom: 0;">
+                        <input type="checkbox" id="flatten" checked>
+                        <label for="flatten">Flatten Results</label>
+                    </div>
+
+                    <div class="checkbox-group" style="margin-bottom: 0;">
+                        <input type="checkbox" id="formattedAddress" checked>
+                        <label for="formattedAddress">Formatted Address in Picklist</label>
+                    </div>
+                </div>
+
+                <button type="button" id="resetOptionsBtn" class="full-width" style="margin-top: 20px; background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                    Reset to Defaults
+                </button>
+
+                <div id="currentSettings" class="full-width" style="margin-top: 15px; padding: 10px; background: #fff; border-radius: 6px; font-size: 12px; color: #666;">
+                    <strong>Current Settings:</strong>
+                    <div id="settingsSummary" style="margin-top: 5px; font-family: monospace;"></div>
+                </div>
+            </div>
+        </details>
+
+        <div class="form-group autocomplete-container">
+            <label for="searchAddress">Search Address:</label>
+            <input type="text" id="searchAddress" placeholder="Start typing an address...">
+            <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
+        </div>
+
+        <!-- Live Mode Section -->
+        <div id="liveModeSection">
+            <button id="getAddressBtn" disabled>Get Full Address Details</button>
+        </div>
+
+        <!-- Manual Mode Section -->
+        <div id="manualModeSection" class="hidden">
+            <div class="button-group">
+                <button id="manualSearchBtn">Search Address</button>
+            </div>
+
+            <div class="response-section" id="searchResponseSection">
+                <div class="response-header">Search Response (Step 1)</div>
+                <div class="response-content">
+                    <pre id="searchResponse"></pre>
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-top: 20px;">
+                <label for="monikerInput">Moniker (from search response):</label>
+                <input type="text" id="monikerInput" placeholder="Paste moniker here...">
+            </div>
+
+            <button id="manualGetAddressBtn">Get Address Details</button>
+
+            <div class="response-section" id="addressResponseSection">
+                <div class="response-header">Address Response (Step 2)</div>
+                <div class="response-content">
+                    <pre id="addressResponse"></pre>
+                </div>
+            </div>
+        </div>
+
+        <div id="messages"></div>
+    </div>
+
+    <script>
+        const apiKeyInput = document.getElementById('apiKey');
+        const searchAddressInput = document.getElementById('searchAddress');
+        const autocompleteDropdown = document.getElementById('autocompleteDropdown');
+        const getAddressBtn = document.getElementById('getAddressBtn');
+        const liveModeCheckbox = document.getElementById('liveMode');
+        const modeIndicator = document.getElementById('modeIndicator');
+        const liveModeSection = document.getElementById('liveModeSection');
+        const manualModeSection = document.getElementById('manualModeSection');
+        const manualSearchBtn = document.getElementById('manualSearchBtn');
+        const manualGetAddressBtn = document.getElementById('manualGetAddressBtn');
+        const monikerInput = document.getElementById('monikerInput');
+        const searchResponseSection = document.getElementById('searchResponseSection');
+        const addressResponseSection = document.getElementById('addressResponseSection');
+        const searchResponse = document.getElementById('searchResponse');
+        const addressResponse = document.getElementById('addressResponse');
+        const messages = document.getElementById('messages');
+
+        // Advanced options
+        const countryInput = document.getElementById('country');
+        const layoutInput = document.getElementById('layout');
+        const intensitySelect = document.getElementById('intensity');
+        const promptSetSelect = document.getElementById('promptSet');
+        const thresholdInput = document.getElementById('threshold');
+        const timeoutInput = document.getElementById('timeout');
+        const flattenCheckbox = document.getElementById('flatten');
+        const formattedAddressCheckbox = document.getElementById('formattedAddress');
+        const engineTypeSelect = document.getElementById('engineType');
+
+        const API_ENDPOINT = 'https://ws3.ondemand.qas.com/ProOnDemand/V3/ProOnDemandService.asmx';
+
+        let searchResults = [];
+        let selectedResult = null;
+        let debounceTimer = null;
+
+        // Default values
+        const defaults = {
+            country: 'AUS',
+            layout: 'CivicaAUS',
+            intensity: 'Extensive',
+            promptSet: 'Default',
+            threshold: '10',
+            timeout: '1000',
+            flatten: true,
+            formattedAddress: true,
+            engineType: 'SingleLine'
+        };
+
+        // Reset to defaults function
+        function resetToDefaults() {
+            countryInput.value = defaults.country;
+            layoutInput.value = defaults.layout;
+            intensitySelect.value = defaults.intensity;
+            promptSetSelect.value = defaults.promptSet;
+            thresholdInput.value = defaults.threshold;
+            timeoutInput.value = defaults.timeout;
+            flattenCheckbox.checked = defaults.flatten;
+            formattedAddressCheckbox.checked = defaults.formattedAddress;
+            engineTypeSelect.value = defaults.engineType;
+            updateSettingsSummary();
+            showMessage('Settings reset to defaults', 'success');
+        }
+
+        // Update settings summary
+        function updateSettingsSummary() {
+            const summary = document.getElementById('settingsSummary');
+            summary.innerHTML = `
+                Country: <strong>${countryInput.value || 'AUS'}</strong> |
+                Engine: <strong>${engineTypeSelect.value}</strong> |
+                Intensity: <strong>${intensitySelect.value}</strong><br>
+                PromptSet: <strong>${promptSetSelect.value}</strong> |
+                Threshold: <strong>${thresholdInput.value}</strong> |
+                Timeout: <strong>${timeoutInput.value}ms</strong><br>
+                Flatten: <strong>${flattenCheckbox.checked ? 'Yes' : 'No'}</strong> |
+                Formatted: <strong>${formattedAddressCheckbox.checked ? 'Yes' : 'No'}</strong>
+            `;
+        }
+
+        // Initialize settings summary
+        updateSettingsSummary();
+
+        // Add event listeners for settings changes
+        [countryInput, layoutInput, intensitySelect, promptSetSelect, thresholdInput,
+         timeoutInput, flattenCheckbox, formattedAddressCheckbox, engineTypeSelect].forEach(element => {
+            element.addEventListener('change', updateSettingsSummary);
+            element.addEventListener('input', updateSettingsSummary);
+        });
+
+        // Reset button
+        document.getElementById('resetOptionsBtn').addEventListener('click', resetToDefaults);
+
+        // Toggle between live and manual mode
+        liveModeCheckbox.addEventListener('change', function() {
+            const isLive = this.checked;
+            if (isLive) {
+                modeIndicator.textContent = 'LIVE MODE';
+                modeIndicator.className = 'mode-indicator live';
+                liveModeSection.classList.remove('hidden');
+                manualModeSection.classList.add('hidden');
+                autocompleteDropdown.classList.remove('show');
+            } else {
+                modeIndicator.textContent = 'MANUAL MODE';
+                modeIndicator.className = 'mode-indicator manual';
+                liveModeSection.classList.add('hidden');
+                manualModeSection.classList.remove('hidden');
+                autocompleteDropdown.classList.remove('show');
+            }
+            selectedResult = null;
+            getAddressBtn.disabled = true;
+        });
+
+        // Live mode: Search as user types
+        searchAddressInput.addEventListener('input', function() {
+            const query = this.value.trim();
+
+            if (!liveModeCheckbox.checked) {
+                return; // Don't auto-search in manual mode
+            }
+
+            clearTimeout(debounceTimer);
+
+            if (query.length < 4) {
+                autocompleteDropdown.classList.remove('show');
+                selectedResult = null;
+                getAddressBtn.disabled = true;
+                return;
+            }
+
+            debounceTimer = setTimeout(() => {
+                performSearch(query);
+            }, 300);
+        });
+
+        // Manual mode: Search button
+        manualSearchBtn.addEventListener('click', function() {
+            const query = searchAddressInput.value.trim();
+            if (!query) {
+                showMessage('Please enter a search address', 'error');
+                return;
+            }
+            performSearch(query, true);
+        });
+
+        // Perform SOAP search (Step 1)
+        async function performSearch(query, isManual = false) {
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+                showMessage('Please enter an API key', 'error');
+                return;
+            }
+
+            if (isManual) {
+                searchResponse.textContent = 'Loading...';
+                searchResponseSection.classList.add('show');
+            }
+
+            // Get configuration values
+            const country = countryInput.value.trim() || 'AUS';
+            const layout = layoutInput.value.trim() || 'CivicaAUS';
+            const intensity = intensitySelect.value || 'Extensive';
+            const promptSet = promptSetSelect.value || 'Default';
+            const threshold = thresholdInput.value || '10';
+            const timeout = timeoutInput.value || '1000';
+            const flatten = flattenCheckbox.checked ? 'true' : 'false';
+            const formattedAddress = formattedAddressCheckbox.checked ? 'true' : 'false';
+            const engineType = engineTypeSelect.value || 'SingleLine';
+
+            const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/">
+<soap:Header>
+<QAQueryHeader xmlns="http://www.qas.com/OnDemand-2011-03">
+<QAAuthentication>
+<Username>string</Username>
+<Password>string</Password>
+</QAAuthentication>
+<Security>xml</Security>
+</QAQueryHeader>
+</soap:Header>
+<soap:Body>
+<QASearch Localisation="string" RequestTag="string" xmlns="http://www.qas.com/OnDemand-2011-03">
+<Country>${escapeXml(country)}</Country>
+<Engine EngineType="${escapeXml(engineType)}" Flatten="${flatten}" Intensity="${escapeXml(intensity)}" PromptSet="${escapeXml(promptSet)}" Threshold="${escapeXml(threshold)}" Timeout="${escapeXml(timeout)}" />
+<Layout>${escapeXml(layout)}</Layout>
+<Search>${escapeXml(query)}</Search>
+<FormattedAddressInPicklist>${formattedAddress}</FormattedAddressInPicklist>
+</QASearch>
+</soap:Body>
+</soap:Envelope>`;
+
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Auth-Token': apiKey,
+                        'Content-Type': 'text/xml',
+                        'Accept': 'application/xml',
+                        'SOAPAction': 'http://www.qas.com/OnDemand-2011-03/DoSearch'
+                    },
+                    body: soapRequest
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const xmlText = await response.text();
+                const data = parseXmlToJson(xmlText);
+
+                if (isManual) {
+                    searchResponse.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    parseAndDisplayResults(data);
+                }
+
+            } catch (error) {
+                console.error('Search error:', error);
+                if (isManual) {
+                    searchResponse.textContent = `Error: ${error.message}`;
+                } else {
+                    showMessage(`Search failed: ${error.message}`, 'error');
+                    autocompleteDropdown.classList.remove('show');
+                }
+            }
+        }
+
+        // Parse JSON response and display in dropdown
+        function parseAndDisplayResults(data) {
+            searchResults = [];
+            autocompleteDropdown.innerHTML = '';
+
+            try {
+                // Navigate through the XML-parsed structure
+                const soapBody = data['soap:Envelope']?.['soap:Body'];
+                if (!soapBody) {
+                    throw new Error('Invalid SOAP response structure');
+                }
+
+                const searchResult = soapBody['QASearchResult'];
+                const picklist = searchResult?.['QAPicklist'];
+
+                if (!picklist) {
+                    autocompleteDropdown.innerHTML = '<div class="autocomplete-item">No results found</div>';
+                    autocompleteDropdown.classList.add('show');
+                    return;
+                }
+
+                let picklistEntries = picklist['PicklistEntry'];
+
+                if (!picklistEntries) {
+                    autocompleteDropdown.innerHTML = '<div class="autocomplete-item">No results found</div>';
+                    autocompleteDropdown.classList.add('show');
+                    return;
+                }
+
+                // Ensure it's an array
+                searchResults = Array.isArray(picklistEntries) ? picklistEntries : [picklistEntries];
+
+                searchResults.forEach((entry, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'autocomplete-item';
+                    item.dataset.index = index;
+
+                    // Extract text content from XML nodes
+                    const mainAddress = getTextContent(entry['Picklist']) || getTextContent(entry['PartialAddress']) || 'Unknown Address';
+                    const postcode = getTextContent(entry['Postcode']) || '';
+                    const score = getTextContent(entry['Score']) || 'N/A';
+
+                    item.innerHTML = `
+                        <div class="address-main">${escapeHtml(mainAddress)}</div>
+                        <div class="address-details">Postcode: ${escapeHtml(postcode)} | Score: ${score}</div>
+                    `;
+
+                    item.addEventListener('click', () => selectResult(index));
+                    autocompleteDropdown.appendChild(item);
+                });
+
+                autocompleteDropdown.classList.add('show');
+
+            } catch (error) {
+                console.error('Parse error:', error);
+                autocompleteDropdown.innerHTML = '<div class="autocomplete-item">Error parsing results: ' + error.message + '</div>';
+                autocompleteDropdown.classList.add('show');
+            }
+        }
+
+        // Helper function to extract text content from XML parsed nodes
+        function getTextContent(node) {
+            if (!node) return '';
+            if (typeof node === 'string') return node;
+            if (node['#text']) return node['#text'];
+            // If the node has only text content
+            for (let key in node) {
+                if (key !== '@attributes' && typeof node[key] === 'string') {
+                    return node[key];
+                }
+            }
+            return '';
+        }
+
+        // Select a result from dropdown
+        function selectResult(index) {
+            selectedResult = searchResults[index];
+            const displayAddress = getTextContent(selectedResult['Picklist']) || getTextContent(selectedResult['PartialAddress']);
+            searchAddressInput.value = displayAddress;
+            autocompleteDropdown.classList.remove('show');
+            getAddressBtn.disabled = false;
+
+            // Highlight selected
+            document.querySelectorAll('.autocomplete-item').forEach((item, i) => {
+                item.classList.toggle('selected', i === index);
+            });
+        }
+
+        // Live mode: Get full address details
+        getAddressBtn.addEventListener('click', function() {
+            if (selectedResult) {
+                const moniker = getTextContent(selectedResult['Moniker']);
+                if (moniker) {
+                    getAddressDetails(moniker);
+                }
+            }
+        });
+
+        // Manual mode: Get address details
+        manualGetAddressBtn.addEventListener('click', function() {
+            const moniker = monikerInput.value.trim();
+            if (!moniker) {
+                showMessage('Please enter a moniker', 'error');
+                return;
+            }
+            getAddressDetails(moniker, true);
+        });
+
+        // Get full address details (Step 2)
+        async function getAddressDetails(moniker, isManual = false) {
+            const apiKey = apiKeyInput.value.trim();
+            if (!apiKey) {
+                showMessage('Please enter an API key', 'error');
+                return;
+            }
+
+            if (isManual) {
+                addressResponse.textContent = 'Loading...';
+                addressResponseSection.classList.add('show');
+            } else {
+                showMessage('Loading address details...', 'loading');
+            }
+
+            const soapRequest = `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ond="http://www.qas.com/OnDemand-2011-03">
+  <soapenv:Header>
+    <ond:QAQueryHeader>
+      <ond:Security>xml</ond:Security>
+    </ond:QAQueryHeader>
+  </soapenv:Header>
+  <soapenv:Body>
+    <ond:QAGetAddress Localisation="AUS" RequestTag="ExperianSearch">
+      <ond:Layout>CivicaAUS</ond:Layout>
+      <ond:Moniker>${escapeXml(moniker)}</ond:Moniker>
+    </ond:QAGetAddress>
+  </soapenv:Body>
+</soapenv:Envelope>`;
+
+            try {
+                const response = await fetch(API_ENDPOINT, {
+                    method: 'POST',
+                    headers: {
+                        'Auth-Token': apiKey,
+                        'Content-Type': 'text/xml; charset=utf-8',
+                        'Accept': 'application/xml',
+                        'SOAPAction': 'http://www.qas.com/OnDemand-2011-03/DoGetAddress'
+                    },
+                    body: soapRequest
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const xmlText = await response.text();
+                const data = parseXmlToJson(xmlText);
+
+                if (isManual) {
+                    addressResponse.textContent = JSON.stringify(data, null, 2);
+                } else {
+                    showMessage('Address details retrieved successfully!', 'success');
+                    console.log('Full Address Details:', data);
+
+                    // Display in a nice format
+                    const formattedAddress = formatAddressResponse(data);
+                    showMessage(formattedAddress, 'success');
+                }
+
+            } catch (error) {
+                console.error('Get address error:', error);
+                if (isManual) {
+                    addressResponse.textContent = `Error: ${error.message}`;
+                } else {
+                    showMessage(`Failed to get address details: ${error.message}`, 'error');
+                }
+            }
+        }
+
+        // Format address response for display
+        function formatAddressResponse(data) {
+            try {
+                const soapBody = data['soap:Envelope']?.['soap:Body'];
+                const address = soapBody?.['Address'];
+                const qaAddress = address?.['QAAddress'];
+
+                if (!qaAddress) {
+                    return 'Address details retrieved (see console for full data)';
+                }
+
+                let addressLines = qaAddress['AddressLine'];
+                if (!addressLines) {
+                    return 'Address details retrieved (see console for full data)';
+                }
+
+                // Ensure it's an array
+                if (!Array.isArray(addressLines)) {
+                    addressLines = [addressLines];
+                }
+
+                let formatted = 'Address Details:\n\n';
+
+                addressLines.forEach(line => {
+                    const label = getTextContent(line['Label']);
+                    const lineText = getTextContent(line['Line']);
+
+                    if (lineText) {
+                        formatted += `${label}: ${lineText}\n`;
+                    }
+                });
+
+                return formatted || 'Address details retrieved (see console for full data)';
+            } catch (error) {
+                console.error('Format error:', error);
+                return 'Address details retrieved (see console for full data)';
+            }
+        }
+
+        // Show messages
+        function showMessage(text, type = 'info') {
+            messages.innerHTML = `<div class="${type}">${escapeHtml(text)}</div>`;
+            if (type !== 'loading') {
+                setTimeout(() => {
+                    messages.innerHTML = '';
+                }, 5000);
+            }
+        }
+
+        // XML to JSON parser
+        function parseXmlToJson(xmlString) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(xmlString, 'text/xml');
+
+            // Check for parse errors
+            const parserError = xmlDoc.querySelector('parsererror');
+            if (parserError) {
+                throw new Error('XML parsing error: ' + parserError.textContent);
+            }
+
+            function xmlToJson(xml) {
+                let obj = {};
+
+                if (xml.nodeType === 1) { // Element node
+                    // Handle attributes
+                    if (xml.attributes.length > 0) {
+                        obj['@attributes'] = {};
+                        for (let j = 0; j < xml.attributes.length; j++) {
+                            const attribute = xml.attributes.item(j);
+                            obj['@attributes'][attribute.nodeName] = attribute.nodeValue;
+                        }
+                    }
+                } else if (xml.nodeType === 3) { // Text node
+                    obj = xml.nodeValue.trim();
+                }
+
+                // Handle child nodes
+                if (xml.hasChildNodes()) {
+                    for (let i = 0; i < xml.childNodes.length; i++) {
+                        const item = xml.childNodes.item(i);
+                        const nodeName = item.nodeName;
+
+                        if (typeof obj[nodeName] === 'undefined') {
+                            const converted = xmlToJson(item);
+                            if (converted !== '') {
+                                obj[nodeName] = converted;
+                            }
+                        } else {
+                            if (typeof obj[nodeName].push === 'undefined') {
+                                const old = obj[nodeName];
+                                obj[nodeName] = [];
+                                obj[nodeName].push(old);
+                            }
+                            const converted = xmlToJson(item);
+                            if (converted !== '') {
+                                obj[nodeName].push(converted);
+                            }
+                        }
+                    }
+                }
+
+                return obj;
+            }
+
+            return xmlToJson(xmlDoc);
+        }
+
+        // Utility functions
+        function escapeXml(unsafe) {
+            return unsafe.replace(/[<>&'"]/g, (c) => {
+                switch (c) {
+                    case '<': return '&lt;';
+                    case '>': return '&gt;';
+                    case '&': return '&amp;';
+                    case '\'': return '&apos;';
+                    case '"': return '&quot;';
+                }
+            });
+        }
+
+        function escapeHtml(unsafe) {
+            return unsafe
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.autocomplete-container')) {
+                autocompleteDropdown.classList.remove('show');
+            }
+        });
+
+        // Keyboard navigation for dropdown
+        let currentFocus = -1;
+        searchAddressInput.addEventListener('keydown', function(e) {
+            const items = autocompleteDropdown.getElementsByClassName('autocomplete-item');
+            if (e.key === 'ArrowDown') {
+                currentFocus++;
+                addActive(items);
+                e.preventDefault();
+            } else if (e.key === 'ArrowUp') {
+                currentFocus--;
+                addActive(items);
+                e.preventDefault();
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (currentFocus > -1 && items[currentFocus]) {
+                    items[currentFocus].click();
+                }
+            }
+        });
+
+        function addActive(items) {
+            if (!items || items.length === 0) return false;
+            removeActive(items);
+            if (currentFocus >= items.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = items.length - 1;
+            items[currentFocus].classList.add('selected');
+            items[currentFocus].scrollIntoView({ block: 'nearest' });
+        }
+
+        function removeActive(items) {
+            for (let i = 0; i < items.length; i++) {
+                items[i].classList.remove('selected');
+            }
+        }
+    </script>
+</body>
+</html>
