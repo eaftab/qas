@@ -446,12 +446,10 @@
 
         <!-- Live Mode Section -->
         <div id="liveModeSection">
-            <button id="getAddressBtn" disabled>Get Full Address Details</button>
-
             <div class="response-section" id="liveAddressResponseSection">
                 <div class="response-header">Full Address Details</div>
                 <div class="response-content">
-                    <pre id="liveAddressResponse"></pre>
+                    <div id="liveAddressResponse"></div>
                 </div>
             </div>
         </div>
@@ -484,7 +482,6 @@
         const apiKeyInput = document.getElementById('apiKey');
         const searchAddressInput = document.getElementById('searchAddress');
         const autocompleteDropdown = document.getElementById('autocompleteDropdown');
-        const getAddressBtn = document.getElementById('getAddressBtn');
         const liveModeCheckbox = document.getElementById('liveMode');
         const modeIndicator = document.getElementById('modeIndicator');
         const liveModeSection = document.getElementById('liveModeSection');
@@ -588,7 +585,6 @@
                 autocompleteDropdown.classList.remove('show');
             }
             selectedResult = null;
-            getAddressBtn.disabled = true;
         });
 
         // Live mode: Search as user types
@@ -604,7 +600,6 @@
             if (query.length < 4) {
                 autocompleteDropdown.classList.remove('show');
                 selectedResult = null;
-                getAddressBtn.disabled = true;
                 return;
             }
 
@@ -786,23 +781,23 @@
             const displayAddress = getTextContent(selectedResult['Picklist']) || getTextContent(selectedResult['PartialAddress']);
             searchAddressInput.value = displayAddress;
             autocompleteDropdown.classList.remove('show');
-            getAddressBtn.disabled = false;
 
             // Highlight selected
             document.querySelectorAll('.autocomplete-item').forEach((item, i) => {
                 item.classList.toggle('selected', i === index);
             });
-        }
 
-        // Live mode: Get full address details
-        getAddressBtn.addEventListener('click', function() {
-            if (selectedResult) {
-                const moniker = getTextContent(selectedResult['Moniker']);
-                if (moniker) {
-                    getAddressDetails(moniker);
-                }
+            // Automatically fetch full address details in live mode
+            const moniker = getTextContent(selectedResult['Moniker']);
+            if (moniker) {
+                // Show loading state
+                liveAddressResponse.innerHTML = '<div style="text-align: center; padding: 20px; color: #667eea;">Loading address details...</div>';
+                liveAddressResponseSection.classList.add('show');
+
+                // Fetch address details
+                getAddressDetails(moniker, false);
             }
-        });
+        }
 
         // Get full address details (Step 2)
         async function getAddressDetails(moniker, isManual = false) {
@@ -854,15 +849,19 @@
                 const data = parseXmlToJson(xmlText);
 
                 if (isManual) {
-                    // Manual mode: Display beautified response like live mode
+                    // Manual mode: Display beautified response with all fields
                     const formattedAddress = formatAddressResponseBeautifiedFull(data);
                     addressResponse.innerHTML = formattedAddress;
+                    addressResponseSection.classList.add('show');
+                    messages.innerHTML = ''; // Clear any loading messages
+                    console.log('Full Address Details (Manual):', data);
                 } else {
-                    // Live mode: Display beautified response
-                    const formattedAddress = formatAddressResponseBeautified(data);
+                    // Live mode: Display beautified response with all fields
+                    const formattedAddress = formatAddressResponseBeautifiedFull(data);
                     liveAddressResponse.innerHTML = formattedAddress;
                     liveAddressResponseSection.classList.add('show');
-                    console.log('Full Address Details:', data);
+                    messages.innerHTML = ''; // Clear any loading messages
+                    console.log('Full Address Details (Live):', data);
                 }
 
             } catch (error) {
